@@ -31,11 +31,23 @@
 ::
 +$  cli-action
   $%  [%select who=ship]
-      [%init (map coord plaintext-tile)]
+      [%init (map ship-type [coord d=direction])]
       [%guess coord]
       [%show ~]
       [%help ~]
   ==
+::
++$  direction
+  $?  %north
+      %east
+      %south
+      %west
+  ==
+::
++$  proto-board
+  ::  unencrypted board state
+  ::
+  (map coord plaintext-tile)
 ::
 +$  app-state
   $:  ::  games: only one game with a person at a time
@@ -54,7 +66,7 @@
 ::  +encrypt-initial-state
 ::
 ++  encrypt-initial-state
-  |=  $:  unencrypted-board=(map coord plaintext-tile)
+  |=  $:  unencrypted-board=proto-board
           eny=@
       ==
   ^-  board-state
@@ -181,6 +193,12 @@
   ::  #
   ::    arms that create outward changes.
   ::
+  ++  sh-apply-engine
+    |=  [moz=(list move) session=session-state]
+    =.  moves  (weld moz moves)  ::TODO  unflop?
+    =.  games  (~(put by games) opponent session)
+    +>.$
+  ::
   ++  sh-apply-effect
     ::  adds a console effect to ++ta's moves.
     ::
@@ -252,15 +270,24 @@
     ::  #  %parsers
     ::    various parsers for command line input.
     |%
+    ++  ship-type
+      ;~  pose
+        (stag %carrier (jest 'car'))
+        (stag %battleship (jest 'bat'))
+        (stag %cruiser (jest 'cru'))
+        (stag %submarine (jest 'sub'))
+        (stag %destroyer (jest 'des'))
+      ==
+    ::
     ++  coord
       ;~((glue com) dem dem)
     ::
     ++  direction
       ;~  pose
-        (just 'n')
-        (just 'e')
-        (just 's')
-        (just 'w')
+        (stag %north (jest 'n'))
+        (stag %east (jest 'e'))
+        (stag %south (jest 's'))
+        (stag %west (jest 'w'))
       ==
     ::
     ++  work
@@ -274,10 +301,23 @@
       ::
         ;~(plug (perk %help ~) (easy ~))
       ::
-        :: ;~  plug
-        ::   (perk %init ~)
+        ;~  plug
+          ;~(sfix ace (perk %init ~))
         ::
-        :: ==
+          %+  sear
+            |=  a=(list (trel ^ship-type ^coord ^direction))
+            ::TODO
+            ::TODO  assert all types are there, ie map wyt == 5
+            ~
+          %+  more
+            %-  star
+            ;~(pose sem ace)
+          ;~  (glue (star ace))
+            ship-type
+            coord
+            direction
+          ==
+        ==
       ==
     --
   ::
@@ -365,8 +405,49 @@
       sh-prompt(opponent who)
     ::
     ++  init
-      |=  setup=(map coord plaintext-tile)
-      !!
+      |=  setup=(map ship-type [coord d=direction])
+      %-  ~(set-and-send-initial-state engine (~(got by games) opponent))
+      %-  encrypt-initial-state:engine
+      ::TODO  isn't this checked for during input?
+      ~|  %incomplete-board-setup
+      ?>  =(5 ~(wyt by setup))
+      |^  %+  roll  ~(tap by setup)
+          |=  [[typ=ship-type coord d=direction] board=proto-board]
+          (place-ship board typ [x y] d)
+      ::  +place-ship: place ship on board, starting at x,y, facing d
+      ::
+      ++  place-ship
+        |=  [board=proto-board typ=ship-type coord d=direction]
+        ^+  board
+        ::TODO  into lib
+        =/  size=@ud
+          ?-  typ
+            %carrier      5
+            %battleship   4
+            %cruiser      3
+            %submarine    3
+            %destroyer    2
+          ==
+        |-  ^+  board
+        ?:  =(0 size)  board
+        =.  board  (place-tile board typ [x y])
+        =-  $(size (dec size), x x, y y)
+        ::TODO  into lib maybe?
+        ^-  coord
+        ?-  d
+          %north  [x (dec y)]
+          %east   [+(x) y]
+          %south  [x +(y)]
+          %west   [(dec x) y]
+        ==
+      ::  +place-tile: place single tile of ship on board, at x,y
+      ::
+      ++  place-tile
+        |=  [board=proto-board typ=ship-type coord]
+        ~|  [%tile-overlap typ [x y]]
+        ?<  (~(has by board) [x y])
+        (~(put by board) [x y] typ)
+      --
     ::
     ++  guess
       |=  =coord
