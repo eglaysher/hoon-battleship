@@ -1,34 +1,29 @@
 |%
+::  +ship-type: a definition of all ship types
+::
++$  ship-type
+  $?  ::  5-tile carrier
+      ::
+      %carrier
+      ::  4-tile battleship
+      ::
+      %battleship
+      ::  3-tile cruiser
+      ::
+      %cruiser
+      :: 3-tile submarine
+      ::
+      %submarine
+      :: 2-tile destroyer
+      ::
+      %destroyer
+  ==
 ::  +plaintext-tile: a definition of all the tile states possible
 ::
 +$  plaintext-tile
-  $%  ::  5-tile carrier
+  $?  ::  a ship exists here
       ::
-      %carrier-1
-      %carrier-2
-      %carrier-3
-      %carrier-4
-      %carrier-5
-      ::  4-tile battleship
-      ::
-      %battleship-1
-      %battleship-2
-      %battleship-3
-      %battleship-4
-      ::  3-tile cruiser
-      ::
-      %cruiser-1
-      %cruiser-2
-      %cruiser-3
-      ::  3-tile submarine
-      ::
-      %submarine-1
-      %submarine-2
-      %submarine-3
-      ::  2-tile destroyer
-      ::
-      %destroyer-1
-      %destroyer-2
+      ship-type
       ::  you missed
       ::
       %empty-tile
