@@ -181,12 +181,14 @@
   ::  #
   ::    arms that create outward changes.
   ::
-  ++  sh-fact
+  ++  sh-apply-effect
     ::  adds a console effect to ++ta's moves.
     ::
     |=  fec=sole-effect
     ^+  +>
     +>(moves [[bone %diff %sole-effect fec] moves])
+  ::
+  ++  sh-bell  (sh-apply-effect %bel ~)
   ::
   ++  sh-message
     ::  sends message to opponent
@@ -213,6 +215,7 @@
     ::
     |=  act=sole-action
     ^+  +>
+    ~&  [%sole-action -.act]
     ?-  -.act
       %det  (sh-edit +.act)
       %clr  ..sh-sole-action :: (sh-pact ~) :: XX clear to PM-to-self?
@@ -270,6 +273,11 @@
         ;~(plug (perk %show ~) (easy ~))
       ::
         ;~(plug (perk %help ~) (easy ~))
+      ::
+        :: ;~  plug
+        ::   (perk %init ~)
+        ::
+        :: ==
       ==
     --
   ::
@@ -298,7 +306,7 @@
       %-  ~(transmit sole-lib state)
       ^-  sole-edit
       ?~(t.lit i.lit [%mor lit])
-    (sh-fact [%mor [%det lic] ?~(err ~ [%err u.err]~)])
+    (sh-apply-effect [%mor [%det lic] ?~(err ~ [%err u.err]~)])
   ::
   ++  sh-obey
     ::    apply result
@@ -313,7 +321,7 @@
     ?^  lit.fix
       (sh-slug fix)
     =+  user-action=(rust (tufa buf.state) sh-read)
-    ?~  user-action  (sh-fact %bel ~)
+    ?~  user-action  sh-bell
     ~!  u.user-action
     %.  u.user-action
     =<  sh-action
@@ -321,7 +329,7 @@
     :: =?  ..sh-obey  &(?=({$';' *} buf) !?=($reply -.u.user-action))
     ::   (sh-note (tufa `(list @)`buf))
     =^  cal  state  (~(transmit sole-lib state) [%set ~])
-    %+  sh-fact  %mor
+    %+  sh-apply-effect  %mor
     :~  [%nex ~]
         [%det cal]
     ==
@@ -383,18 +391,26 @@
     ::  just puts some text into the cli as-is.
     ::
     |=  txt=tape
-    (sh-fact [%txt txt])
+    (sh-apply-effect [%txt txt])
   ::
   ++  sh-prompt
     ::  show opponent in prompt
     ::
     ^+  .
-    %+  sh-fact  %pro
+    %+  sh-apply-effect  %pro
     :+  &  dap.bowl
     ;:  weld
-      "vs "
+      " vs "
       (scow %p opponent)
-      ": "
+      " ("
+    ::
+      ?.  (~(has by games) opponent)
+        "no game"
+      ?:  =(%ours turn:(~(got by games) opponent))
+        "our turn"
+      "their turn"
+    ::
+      "): "
     ==
   ::
   ++  sh-separator  (sh-line (reap 80 '-'))
