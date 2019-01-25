@@ -28,7 +28,7 @@
       ::
       %empty-tile
   ==
-::  +tile-precomit: the real board state with salts
+::  +tile-precommit: the real board state with salts
 ::
 +$  tile-precommit
   $:  ::  salt: a random number to make +tile-hash unguessable

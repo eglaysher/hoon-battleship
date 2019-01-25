@@ -416,7 +416,12 @@
       =>  (sh-board (need local:(~(got by games) opponent)))
       (sh-board (need remote:(~(got by games) opponent)))
     ::
-    ++  help  !!
+    ++  help
+      =/  s  *board-state
+      =.  s  (~(put by s) [2 5] `board-tile`[0v0 `[0v0 %carrier]])
+      =.  s  (~(put by s) [2 6] `board-tile`[0v0 `[0v0 %carrier]])
+      =.  s  (~(put by s) [2 7] `board-tile`[0v0 `[0v0 %empty-tile]])
+      (sh-board s)
     --
   ::
   ::  #
@@ -456,22 +461,22 @@
     |=  board=board-state
     ^+  +>
     %+  sh-apply-effect  %mor
-    :-  [%txt "  1 2 3 4 5 6 7 8 9"]
-    %+  turn  (gulf 1 9)
+    :-  [%txt "  0 1 2 3 4 5 6 7 8 9"]
+    %+  turn  (gulf 0 9)
     |=  x=@
     ::
     :-  %txt
     :-  (add '0' x)
-    :-  ' '
     %-  zing
-    %+  turn  (gulf 1 9)
+    %+  turn  (gulf 0 9)
     |=  y=@
     ::
     ?~  tile=(~(get by board) [x y])
-      "  "
-    ~!  value.precommit.u.tile
-    ?+    value.precommit.u.tile
-        " ."
+      " ."
+    ?~  precommit.u.tile
+      " ."
+    ?+    value.u.precommit.u.tile
+        " ~"
     ::
         %carrier
       " C"
