@@ -35,26 +35,28 @@
   ==
 ::  +tile-precomit: the real board state with salts
 ::
-+$  tile-precomit
++$  tile-precommit
   $:  ::  salt: a random number to make +tile-hash unguessable
       ::
-      salt=@uvJ
+      salt=@uvH
       ::  value: the actual tile value
       ::
       value=plaintext-tile
   ==
 ::  +tile-hash: the hashed, salted, precommit state.
 ::
-::    This is the 
-::
 +$  tile-hash
-  @uvJ
+  @uvH
+::
++$  board-tile
+  [=tile-hash precomit=(unit tile-precommit)
 ::
 +$  board-state
-  (list [tile-hash (unit tile-precommit)])
+  (map coord board-tile)
 ::
 +$  message
-  $:  [%init (map coord tile-hash)]
+  $:  [%invite ~]
+      [%init (map coord tile-hash)]
       [%guess coord]
       [%reveal coord tile-precommit]
   ==
@@ -62,10 +64,10 @@
 +$  session-state
   $:  ::
       ::
-      local=board-state
+      local=(unit board-state)
       ::
       ::
-      remote=board-state
+      remote=(unit board-state)
       ::
       ::
       turn=?(%ours %theirs)
