@@ -6,10 +6,15 @@
 ::
 +$  card
   $%  [%poke wire dock poke-type]
+      [%diff diff-type]
   ==
 ::
 +$  poke-type
   $%  [%battleship-message message]
+  ==
+::
++$  diff-type
+  $%  [%sole-effect sole-effect]
   ==
 ::
 +$  cli-state
@@ -41,16 +46,6 @@
       cli=cli-state
   ==
 ::
-+$  move  (pair bone card)
-::
-+$  card
-  $%  [%diff diff-card]
-  ==
-::
-+$  diff-card
-  $%  [%sole-effect sole-effect]
-  ==
-::
 --
 ::
 ::
@@ -64,7 +59,7 @@
       ==
   ^-  board-state
   ::
-  %+  ~(rut in unencrypted-board)
+  %-  ~(rut by unencrypted-board)
   |=  [=coord =plaintext-tile]
   ^-  board-tile
   ::
@@ -80,47 +75,46 @@
 ++  set-and-send-initial-state
   |=  =board-state
   ^-  (quip move session)
-  ::
-  :_  session(local `board-state)
-  ~
-
-
+  !!
+::
 ::  +send-guess: sends a guess to our counterparty
 ::
 ++  send-guess
   |=  =coord
-  ^-  (quip move session)
+  ^-  (quip move session-state)
   ::
   ?:  =(%theirs turn.session)
     ~&  %waiting-for-their-move
     [~ session]
   ::
   :_  session(turn %theirs)
+  :_  ~
   :*  bone.session
       %poke
       /game/guess
-      ship.session
+      [ship.session %battleship]  ::TODO  dap.bowl ?
       [%battleship-message [%guess coord]]
   ==
 ::  +receive-guess-and-reply: receives a guess from above
 ::
 ++  receive-guess-and-reply
   |=  =coord
-  ^-  (quip move session)
+  ^-  (quip move session-state)
   ::
   ?:  =(%ours turn.session)
     ~&  %received-guess-during-our-turn
     [~ session]
   ::
-  ?~  at-coord=(~(get by (need local.state)) coord)
+  ?~  at-coord=(~(get by (need local.session)) coord)
     ~&  %invalid-coordinate-from-foreign
     [~ session]
   ::
   :_  session(turn %ours)
+  :_  ~
   :*  bone.session
       %poke
       /game/reply
-      ship.session
+      [ship.session %battleship]
       %battleship-message
       [%reveal coord (need precomit.u.at-coord)]
   ==
@@ -128,20 +122,21 @@
 ::
 ++  receive-reply
   |=  [=coord =tile-precommit]
-  ^-  (quip move session)
+  ^-  (quip move session-state)
   ::  make sure the precomit matches the hash we already have
   ::
   =/  =tile-hash  (sham tile-precommit)
   ?.  =(tile-hash tile-hash:(~(got by (need remote.session)) coord))
     ~&  [%precommitment-failure tile-hash]
-    [~ state]
+    [~ session]
   ::  TODO: Some sort of better printout about what happened.
   ::
   ~&  [%outcome coord value.tile-precommit]
   :-  ~
   %_    session
       remote
-    %-  ~(jab by (need remote.session))  coord
+    %-  some
+    %+  ~(jab by (need remote.session))  coord
     |=  =board-tile
     board-tile(precomit `tile-precommit)
   ==
@@ -198,9 +193,12 @@
     ::
     |=  =message
     ^+  +>
-    =-  +>(moves [- moves])
+    =-  +>.$(moves [- moves])
+    ^-  move
     :*  ost.bowl
         %poke
+        /tmp/wire  ::TODO  probably call into main engine instead
+        [~zod dap.bowl]  ::TODO
         %battleship-message
         message
     ==
@@ -217,7 +215,7 @@
     ^+  +>
     ?-  -.act
       %det  (sh-edit +.act)
-      %clr  ..sh-sole :: (sh-pact ~) :: XX clear to PM-to-self?
+      %clr  ..sh-sole-action :: (sh-pact ~) :: XX clear to PM-to-self?
       %ret  sh-obey
     ==
   ::
@@ -229,15 +227,15 @@
     ::
     |=  cal/sole-change
     ^+  +>
-    =^  inv  say.she  (~(transceive sole-lib say.she) cal)
-    =+  fix=(sh-sane inv buf.say.she)
+    =^  inv  state  (~(transceive sole-lib state) cal)
+    =+  fix=(sh-sane inv buf.state)
     ?~  lit.fix
       +>.$
     :: just capital correction
     ?~  err.fix
       (sh-slug fix)
     :: allow interior edits and deletes
-    ?.  &(?=($del -.inv) =(+(p.inv) (lent buf.say.she)))
+    ?.  &(?=($del -.inv) =(+(p.inv) (lent buf.state)))
       +>.$
     (sh-slug fix)
   ::
@@ -263,16 +261,15 @@
       ==
     ::
     ++  work
-      %+  knee  *cli-action  |.  ~+
       ;~  pose
       ::
         (stag %select ;~(pfix sig fed:ag))
       ::
         (stag %guess coord)
       ::
-        ;~(plug (jest 'show') (easy ~))
+        ;~(plug (perk %show ~) (easy ~))
       ::
-        ;~(plug (jest 'help') (easy ~))
+        ;~(plug (perk %help ~) (easy ~))
       ==
     --
   ::
@@ -312,17 +309,18 @@
     ::  the entered command (if any) gets displayed
     ::  to the user.
     ::
-    =+  fix=(sh-sane [%nop ~] buf.say.she)
+    =+  fix=(sh-sane [%nop ~] buf.state)
     ?^  lit.fix
       (sh-slug fix)
-    =+  jub=(rust (tufa buf.say.she) sh-read)
-    ?~  jub  (sh-fact %bel ~)
-    %.  u.jub
+    =+  user-action=(rust (tufa buf.state) sh-read)
+    ?~  user-action  (sh-fact %bel ~)
+    ~!  u.user-action
+    %.  u.user-action
     =<  sh-action
-    =+  buf=buf.say.she
-    =?  ..sh-obey  &(?=({$';' *} buf) !?=($reply -.u.jub))
-      (sh-note (tufa `(list @)`buf))
-    =^  cal  say.she  (~(transmit sole-lib say.she) [%set ~])
+    =+  buf=buf.state
+    :: =?  ..sh-obey  &(?=({$';' *} buf) !?=($reply -.u.user-action))
+    ::   (sh-note (tufa `(list @)`buf))
+    =^  cal  state  (~(transmit sole-lib state) [%set ~])
     %+  sh-fact  %mor
     :~  [%nex ~]
         [%det cal]
@@ -346,10 +344,10 @@
     |%
     ++  perform
       ::  call correct worker
-      ?-  -.job
-        %select  (select +.job)
-        %init    (init +.job)
-        %guess   (guess +.job)
+      ?-  -.action
+        %select  (select +.action)
+        %init    (init +.action)
+        %guess   (guess +.action)
         %show    show
         %help    help
       ==
@@ -358,20 +356,20 @@
       |=  who=ship
       sh-prompt(opponent who)
     ::
-    ++  init  !!
+    ++  init
+      |=  setup=(map coord plaintext-tile)
+      !!
     ::
     ++  guess
       |=  =coord
       (sh-message %guess coord)
     ::
     ++  show
-      =+  game=(~(got by games) opponent)
-      =+  us=?=(%ours turn.game)
       =>  (sh-line "us vs {(scow %p opponent)}")
       =>  (sh-line "xx turn indicator xx") ::"waiting on {?:(us "us" "them")}")
       =>  sh-separator
-      =>  (sh-board local.game)
-      (sh-board remote.game)
+      =>  (sh-board (need local:(~(got by games) opponent)))
+      (sh-board (need remote:(~(got by games) opponent)))
     ::
     ++  help  !!
     --
@@ -403,5 +401,7 @@
   ::
   ++  sh-board
     |=  board=board-state
+    ^+  +>
+    !!
   --
 --

@@ -49,13 +49,13 @@
   @uvH
 ::
 +$  board-tile
-  [=tile-hash precomit=(unit tile-precommit)
+  [=tile-hash precomit=(unit tile-precommit)]
 ::
 +$  board-state
   (map coord board-tile)
 ::
 +$  message
-  $:  [%invite ~]
+  $%  [%invite ~]
       [%init (map coord tile-hash)]
       [%guess coord]
       [%reveal coord tile-precommit]
