@@ -47,21 +47,43 @@
   |=  =board-state
   ^-  (quip move session)
   ::
+  =/  tile-hashes
+    %-  ~(run by board-state)
+    |=  =board-tile
+    tile-hash.board-tile
+  ::
   :_  session(local `board-state)
-  ~
-
-
+  :_  ~
+  :*  bone.session
+      %poke
+      /game/init
+      ship.session
+      [%battleship-message [%init tile-hashes]]
+  ==
+::  +receive-init: receives an init message
+::
+++  receive-init
+  |=  encrypted-remote=(map coord tile-hash)
+  ^-  session
+  ::
+  %_    session
+      remote
+    %-  ~(run by encrypted-remote)
+    |=  =tile-hash
+    [tile=hash ~]
+  ==
 ::  +send-guess: sends a guess to our counterparty
 ::
 ++  send-guess
   |=  =coord
   ^-  (quip move session)
   ::
-  ?:  =(%theirs turn.session)
+  ?:  (is-turn %theirs)
     ~&  %waiting-for-their-move
     [~ session]
   ::
   :_  session(turn %theirs)
+  :_  ~
   :*  bone.session
       %poke
       /game/guess
@@ -74,7 +96,7 @@
   |=  =coord
   ^-  (quip move session)
   ::
-  ?:  =(%ours turn.session)
+  ?:  (is-turn %ours)
     ~&  %received-guess-during-our-turn
     [~ session]
   ::
@@ -111,6 +133,17 @@
     |=  =board-tile
     board-tile(precomit `tile-precommit)
   ==
+::
+++  is-turn
+  |=  wanted=?(%ours %theirs)
+  ^-  ?
+  ::
+  ?~  local.session
+    %.n
+  ?~  remote.session
+    %.n
+  ::
+  =(wanted turn.session)
 --
 ::
 ::
