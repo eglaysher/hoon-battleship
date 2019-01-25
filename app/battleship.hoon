@@ -1,78 +1,15 @@
-/-  sole
+/-  *battleship, *sole
 /+  sole-lib=sole
-=,  sole
 ::
 |%
-::  +plaintext-tile: a definition of all the tile states possible
++$  move  (pair bone card)
 ::
-+$  plaintext-tile
-  $%  ::  5-tile carrier
-      ::
-      %carrier-1
-      %carrier-2
-      %carrier-3
-      %carrier-4
-      %carrier-5
-      ::  4-tile battleship
-      ::
-      %battleship-1
-      %battleship-2
-      %battleship-3
-      %battleship-4
-      ::  3-tile cruiser
-      ::
-      %cruiser-1
-      %cruiser-2
-      %cruiser-3
-      ::  3-tile submarine
-      ::
-      %submarine-1
-      %submarine-2
-      %submarine-3
-      ::  2-tile destroyer
-      ::
-      %destroyer-1
-      %destroyer-2
-      ::  you missed
-      ::
-      %empty-tile
-  ==
-::  +tile-precomit: the real board state with salts
-::
-+$  tile-precomit
-  $:  ::  salt: a random number to make +tile-hash unguessable
-      ::
-      salt=@uvJ
-      ::  value: the actual tile value
-      ::
-      value=plaintext-tile
-  ==
-::  +tile-hash: the hashed, salted, precommit state.
-::
-::    This is the 
-::
-+$  tile-hash
-  @uvJ
-::
-+$  board-state
-  (list [tile-hash (unit tile-precommit)])
-::
-+$  message
-  $:  [%init (map coord tile-hash)]
-      [%guess coord]
-      [%reveal coord tile-precommit]
++$  card
+  $%  [%poke wire dock poke-type]
   ==
 ::
-+$  session-state
-  $:  ::
-      ::
-      local=board-state
-      ::
-      ::
-      remote=board-state
-      ::
-      ::
-      turn=?(%ours %theirs)
++$  poke-type
+  $%  [%battleship-message message]
   ==
 ::
 +$  cli-state
@@ -118,7 +55,96 @@
 ::
 ::
 ::  ~ponnys engine stuff
-|%
+|_  session=session-state
+::  +encrypt-initial-state
+::
+++  encrypt-initial-state
+  |=  $:  unencrypted-board=(map coord plaintext-tile)
+          eny=@
+      ==
+  ^-  board-state
+  ::
+  %+  ~(rut in unencrypted-board)
+  |=  [=coord =plaintext-tile]
+  ^-  board-tile
+  ::
+  =/  salt  (sham [coord eny])
+  =/  =tile-precommit  [salt plaintext-tile]
+  ::
+  [(sham tile-precommit) `tile-precommit]
+::  +set-and-send-initial-state: records and sends our starting state
+::
+::    Both our ship and our opponent have a session now, but neither
+::    has our board state filled in.
+::
+++  set-and-send-initial-state
+  |=  =board-state
+  ^-  (quip move session)
+  ::
+  :_  session(local `board-state)
+  ~
+
+
+::  +send-guess: sends a guess to our counterparty
+::
+++  send-guess
+  |=  =coord
+  ^-  (quip move session)
+  ::
+  ?:  =(%theirs turn.session)
+    ~&  %waiting-for-their-move
+    [~ session]
+  ::
+  :_  session(turn %theirs)
+  :*  bone.session
+      %poke
+      /game/guess
+      ship.session
+      [%battleship-message [%guess coord]]
+  ==
+::  +receive-guess-and-reply: receives a guess from above
+::
+++  receive-guess-and-reply
+  |=  =coord
+  ^-  (quip move session)
+  ::
+  ?:  =(%ours turn.session)
+    ~&  %received-guess-during-our-turn
+    [~ session]
+  ::
+  ?~  at-coord=(~(get by (need local.state)) coord)
+    ~&  %invalid-coordinate-from-foreign
+    [~ session]
+  ::
+  :_  session(turn %ours)
+  :*  bone.session
+      %poke
+      /game/reply
+      ship.session
+      %battleship-message
+      [%reveal coord (need precomit.u.at-coord)]
+  ==
+::  +receive-reply: receives a reply
+::
+++  receive-reply
+  |=  [=coord =tile-precommit]
+  ^-  (quip move session)
+  ::  make sure the precomit matches the hash we already have
+  ::
+  =/  =tile-hash  (sham tile-precommit)
+  ?.  =(tile-hash tile-hash:(~(got by (need remote.session)) coord))
+    ~&  [%precommitment-failure tile-hash]
+    [~ state]
+  ::  TODO: Some sort of better printout about what happened.
+  ::
+  ~&  [%outcome coord value.tile-precommit]
+  :-  ~
+  %_    session
+      remote
+    %-  ~(jab by (need remote.session))  coord
+    |=  =board-tile
+    board-tile(precomit `tile-precommit)
+  ==
 --
 ::
 ::
