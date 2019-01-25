@@ -28,7 +28,7 @@
       ::
       %empty-tile
   ==
-::  +tile-precomit: the real board state with salts
+::  +tile-precommit: the real board state with salts
 ::
 +$  tile-precommit
   $:  ::  salt: a random number to make +tile-hash unguessable
@@ -44,7 +44,7 @@
   @uvH
 ::
 +$  board-tile
-  [=tile-hash precomit=(unit tile-precommit)]
+  [=tile-hash precommit=(unit tile-precommit)]
 ::
 +$  board-state
   (map coord board-tile)

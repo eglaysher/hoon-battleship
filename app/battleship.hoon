@@ -86,16 +86,42 @@
 ::
 ++  set-and-send-initial-state
   |=  =board-state
-  ^-  (quip move session)
-  !!
+  ^-  (quip move session-state)
+  ::
+  =/  tile-hashes
+    %-  ~(run by board-state)
+    |=  =board-tile
+    tile-hash.board-tile
+  ::
+  :_  session(local `board-state)
+  :_  ~
+  ^-  move
+  :*  bone.session
+      %poke
+      /game/init
+      [ship.session %battleship]
+      [%battleship-message [%init tile-hashes]]
+  ==
+::  +receive-init: receives an init message
 ::
+++  receive-init
+  |=  encrypted-remote=(map coord tile-hash)
+  ^-  session-state
+  ::
+  %_    session
+      remote
+    :-  ~
+    %-  ~(run by encrypted-remote)
+    |=  =tile-hash
+    [tile-hash ~]
+  ==
 ::  +send-guess: sends a guess to our counterparty
 ::
 ++  send-guess
   |=  =coord
   ^-  (quip move session-state)
   ::
-  ?:  =(%theirs turn.session)
+  ?:  (is-turn %theirs)
     ~&  %waiting-for-their-move
     [~ session]
   ::
@@ -113,7 +139,7 @@
   |=  =coord
   ^-  (quip move session-state)
   ::
-  ?:  =(%ours turn.session)
+  ?:  (is-turn %ours)
     ~&  %received-guess-during-our-turn
     [~ session]
   ::
@@ -128,14 +154,14 @@
       /game/reply
       [ship.session %battleship]
       %battleship-message
-      [%reveal coord (need precomit.u.at-coord)]
+      [%reveal coord (need precommit.u.at-coord)]
   ==
 ::  +receive-reply: receives a reply
 ::
 ++  receive-reply
   |=  [=coord =tile-precommit]
   ^-  (quip move session-state)
-  ::  make sure the precomit matches the hash we already have
+  ::  make sure the precommit matches the hash we already have
   ::
   =/  =tile-hash  (sham tile-precommit)
   ?.  =(tile-hash tile-hash:(~(got by (need remote.session)) coord))
@@ -150,8 +176,19 @@
     %-  some
     %+  ~(jab by (need remote.session))  coord
     |=  =board-tile
-    board-tile(precomit `tile-precommit)
+    board-tile(precommit `tile-precommit)
   ==
+::
+++  is-turn
+  |=  wanted=?(%ours %theirs)
+  ^-  ?
+  ::
+  ?~  local.session
+    %.n
+  ?~  remote.session
+    %.n
+  ::
+  =(wanted turn.session)
 --
 ::
 ::
@@ -460,7 +497,12 @@
       =>  (sh-board (need local:(~(got by games) opponent)))
       (sh-board (need remote:(~(got by games) opponent)))
     ::
-    ++  help  !!
+    ++  help
+      =/  s  *board-state
+      =.  s  (~(put by s) [2 5] `board-tile`[0v0 `[0v0 %carrier]])
+      =.  s  (~(put by s) [2 6] `board-tile`[0v0 `[0v0 %carrier]])
+      =.  s  (~(put by s) [2 7] `board-tile`[0v0 `[0v0 %empty-tile]])
+      (sh-board s)
     --
   ::
   ::  #
@@ -499,6 +541,38 @@
   ++  sh-board
     |=  board=board-state
     ^+  +>
-    !!
+    %+  sh-apply-effect  %mor
+    :-  [%txt "  0 1 2 3 4 5 6 7 8 9"]
+    %+  turn  (gulf 0 9)
+    |=  x=@
+    ::
+    :-  %txt
+    :-  (add '0' x)
+    %-  zing
+    %+  turn  (gulf 0 9)
+    |=  y=@
+    ::
+    ?~  tile=(~(get by board) [x y])
+      " ."
+    ?~  precommit.u.tile
+      " ."
+    ?+    value.u.precommit.u.tile
+        " ~"
+    ::
+        %carrier
+      " C"
+    ::
+        %battleship
+      " B"
+    ::
+        %cruiser
+      " R"
+    ::
+        %submarine
+      " S"
+    ::
+        %destroyer
+      " D"
+    ==
   --
 --
