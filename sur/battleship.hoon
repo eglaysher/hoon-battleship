@@ -49,7 +49,7 @@
   @uvH
 ::
 +$  board-tile
-  [=tile-hash precomit=(unit tile-precommit)]
+  [=tile-hash precommit=(unit tile-precommit)]
 ::
 +$  board-state
   (map coord board-tile)

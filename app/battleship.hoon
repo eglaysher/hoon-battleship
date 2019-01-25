@@ -74,7 +74,7 @@
 ::
 ++  set-and-send-initial-state
   |=  =board-state
-  ^-  (quip move session)
+  ^-  (quip move session-state)
   ::
   =/  tile-hashes
     %-  ~(run by board-state)
@@ -83,23 +83,25 @@
   ::
   :_  session(local `board-state)
   :_  ~
+  ^-  move
   :*  bone.session
       %poke
       /game/init
-      ship.session
+      [ship.session %battleship]
       [%battleship-message [%init tile-hashes]]
   ==
 ::  +receive-init: receives an init message
 ::
 ++  receive-init
   |=  encrypted-remote=(map coord tile-hash)
-  ^-  session
+  ^-  session-state
   ::
   %_    session
       remote
+    :-  ~
     %-  ~(run by encrypted-remote)
     |=  =tile-hash
-    [tile=hash ~]
+    [tile-hash ~]
   ==
 ::  +send-guess: sends a guess to our counterparty
 ::
@@ -140,14 +142,14 @@
       /game/reply
       [ship.session %battleship]
       %battleship-message
-      [%reveal coord (need precomit.u.at-coord)]
+      [%reveal coord (need precommit.u.at-coord)]
   ==
 ::  +receive-reply: receives a reply
 ::
 ++  receive-reply
   |=  [=coord =tile-precommit]
   ^-  (quip move session-state)
-  ::  make sure the precomit matches the hash we already have
+  ::  make sure the precommit matches the hash we already have
   ::
   =/  =tile-hash  (sham tile-precommit)
   ?.  =(tile-hash tile-hash:(~(got by (need remote.session)) coord))
@@ -162,7 +164,7 @@
     %-  some
     %+  ~(jab by (need remote.session))  coord
     |=  =board-tile
-    board-tile(precomit `tile-precommit)
+    board-tile(precommit `tile-precommit)
   ==
 ::
 ++  is-turn
@@ -453,6 +455,38 @@
   ++  sh-board
     |=  board=board-state
     ^+  +>
-    !!
+    %+  sh-apply-effect  %mor
+    :-  [%txt "  1 2 3 4 5 6 7 8 9"]
+    %+  turn  (gulf 1 9)
+    |=  x=@
+    ::
+    :-  %txt
+    :-  (add '0' x)
+    :-  ' '
+    %-  zing
+    %+  turn  (gulf 1 9)
+    |=  y=@
+    ::
+    ?~  tile=(~(get by board) [x y])
+      "  "
+    ~!  value.precommit.u.tile
+    ?+    value.precommit.u.tile
+        " ."
+    ::
+        %carrier
+      " C"
+    ::
+        %battleship
+      " B"
+    ::
+        %cruiser
+      " R"
+    ::
+        %submarine
+      " S"
+    ::
+        %destroyer
+      " D"
+    ==
   --
 --
