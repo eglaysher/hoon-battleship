@@ -11,10 +11,10 @@
       ::  3-tile cruiser
       ::
       %cruiser
-      :: 3-tile submarine
+      ::  3-tile submarine
       ::
       %submarine
-      :: 2-tile destroyer
+      ::  2-tile destroyer
       ::
       %destroyer
   ==
