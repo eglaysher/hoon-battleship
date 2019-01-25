@@ -61,138 +61,140 @@
 --
 ::
 ::
-::  ~ponnys engine stuff
-|_  session=session-state
-::  +encrypt-initial-state
-::
-++  encrypt-initial-state
-  |=  $:  unencrypted-board=proto-board
-          eny=@
-      ==
-  ^-  board-state
+|%
+++  engine
+  |_  session=session-state
+  ::  +encrypt-initial-state
   ::
-  %-  ~(rut by unencrypted-board)
-  |=  [=coord =plaintext-tile]
-  ^-  board-tile
+  ++  encrypt-initial-state
+    |=  $:  unencrypted-board=proto-board
+            eny=@
+        ==
+    ^-  board-state
+    ::
+    %-  ~(rut by unencrypted-board)
+    |=  [=coord =plaintext-tile]
+    ^-  board-tile
+    ::
+    =/  salt  (sham [coord eny])
+    =/  =tile-precommit  [salt plaintext-tile]
+    ::
+    [(sham tile-precommit) `tile-precommit]
+  ::  +set-and-send-initial-state: records and sends our starting state
   ::
-  =/  salt  (sham [coord eny])
-  =/  =tile-precommit  [salt plaintext-tile]
+  ::    Both our ship and our opponent have a session now, but neither
+  ::    has our board state filled in.
   ::
-  [(sham tile-precommit) `tile-precommit]
-::  +set-and-send-initial-state: records and sends our starting state
-::
-::    Both our ship and our opponent have a session now, but neither
-::    has our board state filled in.
-::
-++  set-and-send-initial-state
-  |=  =board-state
-  ^-  (quip move session-state)
+  ++  set-and-send-initial-state
+    |=  =board-state
+    ^-  (quip move session-state)
+    ::
+    =/  tile-hashes
+      %-  ~(run by board-state)
+      |=  =board-tile
+      tile-hash.board-tile
+    ::
+    :_  session(local `board-state)
+    :_  ~
+    ^-  move
+    :*  bone.session
+        %poke
+        /game/init
+        [ship.session %battleship]
+        [%battleship-message [%init tile-hashes]]
+    ==
+  ::  +receive-init: receives an init message
   ::
-  =/  tile-hashes
-    %-  ~(run by board-state)
-    |=  =board-tile
-    tile-hash.board-tile
+  ++  receive-init
+    |=  encrypted-remote=(map coord tile-hash)
+    ^-  session-state
+    ::
+    %_    session
+        remote
+      :-  ~
+      %-  ~(run by encrypted-remote)
+      |=  =tile-hash
+      [tile-hash ~]
+    ==
+  ::  +send-guess: sends a guess to our counterparty
   ::
-  :_  session(local `board-state)
-  :_  ~
-  ^-  move
-  :*  bone.session
-      %poke
-      /game/init
-      [ship.session %battleship]
-      [%battleship-message [%init tile-hashes]]
-  ==
-::  +receive-init: receives an init message
-::
-++  receive-init
-  |=  encrypted-remote=(map coord tile-hash)
-  ^-  session-state
+  ++  send-guess
+    |=  =coord
+    ^-  (quip move session-state)
+    ::
+    ?:  (is-turn %theirs)
+      ~&  %waiting-for-their-move
+      [~ session]
+    ::
+    :_  session(turn %theirs)
+    :_  ~
+    :*  bone.session
+        %poke
+        /game/guess
+        [ship.session %battleship]  ::TODO  dap.bowl ?
+        [%battleship-message [%guess coord]]
+    ==
+  ::  +receive-guess-and-reply: receives a guess from above
   ::
-  %_    session
-      remote
+  ++  receive-guess-and-reply
+    |=  =coord
+    ^-  (quip move session-state)
+    ::
+    ?:  (is-turn %ours)
+      ~&  %received-guess-during-our-turn
+      [~ session]
+    ::
+    ?~  at-coord=(~(get by (need local.session)) coord)
+      ~&  %invalid-coordinate-from-foreign
+      [~ session]
+    ::
+    :_  session(turn %ours)
+    :_  ~
+    :*  bone.session
+        %poke
+        /game/reply
+        [ship.session %battleship]
+        %battleship-message
+        [%reveal coord (need precommit.u.at-coord)]
+    ==
+  ::  +receive-reply: receives a reply
+  ::
+  ++  receive-reply
+    |=  [=coord =tile-precommit]
+    ^-  (quip move session-state)
+    ::  make sure the precommit matches the hash we already have
+    ::
+    =/  =tile-hash  (sham tile-precommit)
+    ?.  =(tile-hash tile-hash:(~(got by (need remote.session)) coord))
+      ~&  [%precommitment-failure tile-hash]
+      [~ session]
+    ::  TODO: Some sort of better printout about what happened.
+    ::
+    ~&  [%outcome coord value.tile-precommit]
     :-  ~
-    %-  ~(run by encrypted-remote)
-    |=  =tile-hash
-    [tile-hash ~]
-  ==
-::  +send-guess: sends a guess to our counterparty
-::
-++  send-guess
-  |=  =coord
-  ^-  (quip move session-state)
+    %_    session
+        remote
+      %-  some
+      %+  ~(jab by (need remote.session))  coord
+      |=  =board-tile
+      board-tile(precommit `tile-precommit)
+    ==
   ::
-  ?:  (is-turn %theirs)
-    ~&  %waiting-for-their-move
-    [~ session]
-  ::
-  :_  session(turn %theirs)
-  :_  ~
-  :*  bone.session
-      %poke
-      /game/guess
-      [ship.session %battleship]  ::TODO  dap.bowl ?
-      [%battleship-message [%guess coord]]
-  ==
-::  +receive-guess-and-reply: receives a guess from above
-::
-++  receive-guess-and-reply
-  |=  =coord
-  ^-  (quip move session-state)
-  ::
-  ?:  (is-turn %ours)
-    ~&  %received-guess-during-our-turn
-    [~ session]
-  ::
-  ?~  at-coord=(~(get by (need local.session)) coord)
-    ~&  %invalid-coordinate-from-foreign
-    [~ session]
-  ::
-  :_  session(turn %ours)
-  :_  ~
-  :*  bone.session
-      %poke
-      /game/reply
-      [ship.session %battleship]
-      %battleship-message
-      [%reveal coord (need precommit.u.at-coord)]
-  ==
-::  +receive-reply: receives a reply
-::
-++  receive-reply
-  |=  [=coord =tile-precommit]
-  ^-  (quip move session-state)
-  ::  make sure the precommit matches the hash we already have
-  ::
-  =/  =tile-hash  (sham tile-precommit)
-  ?.  =(tile-hash tile-hash:(~(got by (need remote.session)) coord))
-    ~&  [%precommitment-failure tile-hash]
-    [~ session]
-  ::  TODO: Some sort of better printout about what happened.
-  ::
-  ~&  [%outcome coord value.tile-precommit]
-  :-  ~
-  %_    session
-      remote
-    %-  some
-    %+  ~(jab by (need remote.session))  coord
-    |=  =board-tile
-    board-tile(precommit `tile-precommit)
-  ==
-::
-++  is-turn
-  |=  wanted=?(%ours %theirs)
-  ^-  ?
-  ::
-  ?~  local.session
-    %.n
-  ?~  remote.session
-    %.n
-  ::
-  =(wanted turn.session)
+  ++  is-turn
+    |=  wanted=?(%ours %theirs)
+    ^-  ?
+    ::
+    ?~  local.session
+      %.n
+    ?~  remote.session
+      %.n
+    ::
+    =(wanted turn.session)
+  --
 --
 ::
 ::
-::  ~palfun integration stuff
+::  app core
 |_  [=bowl:gall app-state]
 ::
 ++  prep
@@ -341,14 +343,16 @@
         ;~  plug
           ;~(sfix ace (perk %init ~))
         ::
+        ::
           %+  sear
             |=  a=(list (trel ^ship-type ^coord ^direction))
-            ::TODO
-            ::TODO  assert all types are there, ie map wyt == 5
-            ~
+            =+  board=(~(gas by *proto-board) a)
+            ~|  %incomplete-board-setup
+            ?>  =(5 ~(wyt by board))
+            board
           %+  more
             %-  star
-            ;~(pose sem ace)
+            ;~(pose mic ace)
           ;~  (glue (star ace))
             ship-type
             coord
@@ -439,12 +443,15 @@
     ::
     ++  select
       |=  who=ship
+      ^+  ..sh-action
       sh-prompt(opponent who)
     ::
     ++  init
       |=  setup=(map ship-type [coord d=direction])
+      ^+  ..sh-action
+      %-  sh-apply-engine
       %-  ~(set-and-send-initial-state engine (~(got by games) opponent))
-      %-  encrypt-initial-state:engine
+      =-  (encrypt-initial-state:engine - eny.bowl)
       ::TODO  isn't this checked for during input?
       ~|  %incomplete-board-setup
       ?>  =(5 ~(wyt by setup))
@@ -488,9 +495,11 @@
     ::
     ++  guess
       |=  =coord
+      ^+  ..sh-action
       (sh-message %guess coord)
     ::
     ++  show
+      ^+  ..sh-action
       =>  (sh-line "us vs {(scow %p opponent)}")
       =>  (sh-line "xx turn indicator xx") ::"waiting on {?:(us "us" "them")}")
       =>  sh-separator
@@ -498,6 +507,7 @@
       (sh-board (need remote:(~(got by games) opponent)))
     ::
     ++  help
+      ^+  ..sh-action
       =/  s  *board-state
       =.  s  (~(put by s) [2 5] `board-tile`[0v0 `[0v0 %carrier]])
       =.  s  (~(put by s) [2 6] `board-tile`[0v0 `[0v0 %carrier]])
