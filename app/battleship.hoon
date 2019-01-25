@@ -77,5 +77,16 @@
       games=(map ship session-state)
   ==
 ::
+--
+::
+::
+::  ~ponnys engine stuff
+|%
+--
+::
+::
+::  ~palfun integration stuff
+|_  [=bowl:gall app-state]
+++  poke
 
 --
