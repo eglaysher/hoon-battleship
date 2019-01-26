@@ -66,7 +66,7 @@
 ::
 |%
 ++  engine
-  |_  session=session-state
+  |_  [=bowl:gall session=session-state]
   ::  +encrypt-initial-state
   ::
   ++  encrypt-initial-state
@@ -100,7 +100,7 @@
     :_  session(local `board-state)
     :_  ~
     ^-  move
-    :*  bone.session
+    :*  ost.bowl
         %poke
         /game/init
         [ship.session %battleship]
@@ -131,7 +131,7 @@
     ::
     :_  session(turn %theirs)
     :_  ~
-    :*  bone.session
+    :*  ost.bowl
         %poke
         /game/guess
         [ship.session %battleship]  ::TODO  dap.bowl ?
@@ -153,7 +153,7 @@
     ::
     :_  session(turn %ours)
     :_  ~
-    :*  bone.session
+    :*  ost.bowl
         %poke
         /game/reply
         [ship.session %battleship]
@@ -462,7 +462,7 @@
       |=  setup=board-setup-instructions
       ^+  ..sh-action
       %-  sh-apply-engine
-      %-  ~(set-and-send-initial-state engine *session-state)
+      %-  ~(set-and-send-initial-state engine [bowl *session-state])
       =-  (encrypt-initial-state:engine - eny.bowl)
       ::TODO  isn't this checked for during input?
       ~|  %incomplete-board-setup
