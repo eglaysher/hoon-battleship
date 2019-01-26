@@ -470,9 +470,20 @@
         %theirs
       =.  ship.ses  opponent
       %-  ~(set-and-send-initial-state engine [bowl ses])
-      =-  (encrypt-initial-state:engine - eny.bowl)
+      =-  =-  (encrypt-initial-state:engine - eny.bowl)
+          =+  board=-
+          =+  x=(gulf 0 9)
+          |-
+          ?~  x  board
+          =+  y=(gulf 0 9)
+          |-
+          ?~  y  ^$(x t.x)
+          =?  board  !(~(has by board) [i.x i.y])
+            (~(put by board) `coord`[i.x i.y] `plaintext-tile`%empty-tile)
+          $(y t.y)
       ::TODO  isn't this checked for during input?
       ~|  %incomplete-board-setup
+      ^-  proto-board
       ?>  =(5 ~(wyt by setup))
       |^  %+  roll  ~(tap by setup)
           |=  [[typ=ship-type coord d=direction] board=proto-board]
