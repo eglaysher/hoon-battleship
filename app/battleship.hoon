@@ -221,22 +221,23 @@
   |=  msg=message
   ^-  (quip move _+>)
   =+  game=(fall (~(get by games) src.bowl) *session-state)
+  =+  eng=~(. engine bowl game)
   ?-  -.msg
       %init
     ~&  "received game init from {(scow %p src.bowl)}"
     =.  games
       %+  ~(put by games)  src.bowl
-      (~(receive-init engine game) +.msg)
+      (receive-init:eng +.msg)
     [~ +>.$]
   ::
       %guess
     =^  moz  game
-      (~(receive-guess-and-reply engine game) +.msg)
+      (receive-guess-and-reply:eng +.msg)
     =.  games  (~(put by games) src.bowl game)
     [moz +>.$]
       %reveal
     =^  moz  game
-      (~(receive-reply engine game) +.msg)
+      (receive-reply:eng +.msg)
     =.  games  (~(put by games) src.bowl game)
     [moz +>.$]
   ==
@@ -509,7 +510,7 @@
       |=  =coord
       ^+  ..sh-action
       %-  sh-apply-engine
-      (~(send-guess engine (~(got by games) opponent)) coord)
+      (~(send-guess engine bowl (~(got by games) opponent)) coord)
     ::
     ++  show
       ^+  ..sh-action
