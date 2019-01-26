@@ -217,6 +217,30 @@
   =.  state.cli  *sole-share
   sh-done:~(sh-prompt sh ~ cli)
 ::
+++  poke-battleship-message
+  |=  msg=message
+  ^-  (quip move _+>)
+  =+  game=(fall (~(get by games) src.bowl) *session-state)
+  ?-  -.msg
+      %init
+    ~&  "received game init from {(scow %p src.bowl)}"
+    =.  games
+      %+  ~(put by games)  src.bowl
+      (~(receive-init engine game) +.msg)
+    [~ +>.$]
+  ::
+      %guess
+    =^  moz  game
+      (~(receive-guess-and-reply engine game) +.msg)
+    =.  games  (~(put by games) src.bowl game)
+    [moz +>.$]
+      %reveal
+    =^  moz  game
+      (~(receive-reply engine game) +.msg)
+    =.  games  (~(put by games) src.bowl game)
+    [moz +>.$]
+  ==
+::
 ++  poke-sole-action
   |=  action=sole-action
   ^-  (quip move _+>)
@@ -237,7 +261,7 @@
   ::
   ++  sh-apply-engine
     |=  [moz=(list move) session=session-state]
-    =.  moves  (weld moz moves)  ::TODO  unflop?
+    =.  moves  (weld moz moves)
     =.  games  (~(put by games) opponent session)
     +>.$
   ::
@@ -249,21 +273,6 @@
     +>(moves [[bone %diff %sole-effect fec] moves])
   ::
   ++  sh-bell  (sh-apply-effect %bel ~)
-  ::
-  ++  sh-message
-    ::  sends message to opponent
-    ::
-    |=  =message
-    ^+  +>
-    =-  +>.$(moves [- moves])
-    ^-  move
-    :*  ost.bowl
-        %poke
-        /tmp/wire  ::TODO  probably call into main engine instead
-        [~zod dap.bowl]  ::TODO
-        %battleship-message
-        message
-    ==
   ::
   ::  #
   ::  #  %cli-interaction
@@ -499,7 +508,8 @@
     ++  guess
       |=  =coord
       ^+  ..sh-action
-      (sh-message %guess coord)
+      %-  sh-apply-engine
+      (~(send-guess engine (~(got by games) opponent)) coord)
     ::
     ++  show
       ^+  ..sh-action

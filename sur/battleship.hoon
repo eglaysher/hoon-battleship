@@ -28,7 +28,7 @@
       ::
       %empty-tile
   ==
-::  +tile-precommit: the real board state with salts
+::  +tile-precomit: the real board state with salts
 ::
 +$  tile-precommit
   $:  ::  salt: a random number to make +tile-hash unguessable
@@ -50,8 +50,7 @@
   (map coord board-tile)
 ::
 +$  message
-  $%  [%invite ~]
-      [%init (map coord tile-hash)]
+  $%  [%init (map coord tile-hash)]
       [%guess coord]
       [%reveal coord tile-precommit]
   ==
