@@ -31,7 +31,7 @@
 ::
 +$  cli-action
   $%  [%select who=ship]
-      [%init (map ship-type [coord d=direction])]
+      [%init board-setup-instructions]
       [%guess coord]
       [%show ~]
       [%help ~]
@@ -43,6 +43,9 @@
       %south
       %west
   ==
+::
++$  board-setup-instructions
+  (map ship-type [coord d=direction])
 ::
 +$  proto-board
   ::  unencrypted board state
@@ -311,11 +314,11 @@
     |%
     ++  ship-type
       ;~  pose
-        (stag %carrier (jest 'car'))
-        (stag %battleship (jest 'bat'))
-        (stag %cruiser (jest 'cru'))
-        (stag %submarine (jest 'sub'))
-        (stag %destroyer (jest 'des'))
+        (cold %carrier (jest 'car'))
+        (cold %battleship (jest 'bat'))
+        (cold %cruiser (jest 'cru'))
+        (cold %submarine (jest 'sub'))
+        (cold %destroyer (jest 'des'))
       ==
     ::
     ++  coord
@@ -323,10 +326,10 @@
     ::
     ++  direction
       ;~  pose
-        (stag %north (jest 'n'))
-        (stag %east (jest 'e'))
-        (stag %south (jest 's'))
-        (stag %west (jest 'w'))
+        (cold %north (jest 'n'))
+        (cold %east (jest 'e'))
+        (cold %south (jest 's'))
+        (cold %west (jest 'w'))
       ==
     ::
     ++  work
@@ -341,15 +344,15 @@
         ;~(plug (perk %help ~) (easy ~))
       ::
         ;~  plug
-          ;~(sfix ace (perk %init ~))
+          (perk %init ~)
         ::
-        ::
+          =-  ;~(pfix ace -)
           %+  sear
             |=  a=(list (trel ^ship-type ^coord ^direction))
-            =+  board=(~(gas by *proto-board) a)
-            ~|  %incomplete-board-setup
-            ?>  =(5 ~(wyt by board))
-            board
+            ^-  (unit board-setup-instructions)
+            =+  board=(~(gas by *board-setup-instructions) a)
+            ?.  =(5 ~(wyt by board))  ~
+            `board
           %+  more
             %-  star
             ;~(pose mic ace)
@@ -447,10 +450,10 @@
       sh-prompt(opponent who)
     ::
     ++  init
-      |=  setup=(map ship-type [coord d=direction])
+      |=  setup=board-setup-instructions
       ^+  ..sh-action
       %-  sh-apply-engine
-      %-  ~(set-and-send-initial-state engine (~(got by games) opponent))
+      %-  ~(set-and-send-initial-state engine *session-state)
       =-  (encrypt-initial-state:engine - eny.bowl)
       ::TODO  isn't this checked for during input?
       ~|  %incomplete-board-setup
