@@ -219,6 +219,7 @@
 ::
 ++  poke-battleship-message
   |=  msg=message
+  ~&  [%pooke -.msg]
   ^-  (quip move _+>)
   =+  game=(fall (~(get by games) src.bowl) *session-state)
   =+  eng=~(. engine bowl game)
@@ -235,6 +236,7 @@
       (receive-guess-and-reply:eng +.msg)
     =.  games  (~(put by games) src.bowl game)
     [moz +>.$]
+  ::
       %reveal
     =^  moz  game
       (receive-reply:eng +.msg)
@@ -285,7 +287,6 @@
     ::
     |=  act=sole-action
     ^+  +>
-    ~&  [%sole-action -.act]
     ?-  -.act
       %det  (sh-edit +.act)
       %clr  ..sh-sole-action :: (sh-pact ~) :: XX clear to PM-to-self?
@@ -463,7 +464,12 @@
       |=  setup=board-setup-instructions
       ^+  ..sh-action
       %-  sh-apply-engine
-      %-  ~(set-and-send-initial-state engine [bowl *session-state])
+      =+  ses=(fall (~(get by games) opponent) *session-state)
+      =.  turn.ses
+        ?:  (gth opponent our.bowl)  %ours
+        %theirs
+      =.  ship.ses  opponent
+      %-  ~(set-and-send-initial-state engine [bowl ses])
       =-  (encrypt-initial-state:engine - eny.bowl)
       ::TODO  isn't this checked for during input?
       ~|  %incomplete-board-setup
@@ -517,8 +523,13 @@
       =>  (sh-line "us vs {(scow %p opponent)}")
       =>  (sh-line "xx turn indicator xx") ::"waiting on {?:(us "us" "them")}")
       =>  sh-separator
-      =>  (sh-board (need local:(~(got by games) opponent)))
-      (sh-board (need remote:(~(got by games) opponent)))
+      =>  =+  lb=local:(~(got by games) opponent)
+          ?~  lb  (sh-line "local not setup")
+          (sh-board u.lb)
+      =>  sh-separator
+      =+  rb=remote:(~(got by games) opponent)
+      ?~  rb  (sh-line "remote not setup")
+      (sh-board u.rb)
     ::
     ++  help
       ^+  ..sh-action
@@ -560,7 +571,7 @@
       "): "
     ==
   ::
-  ++  sh-separator  (sh-line (reap 80 '-'))
+  ++  sh-separator  (sh-line (reap 12 '-'))
   ::
   ++  sh-board
     |=  board=board-state
